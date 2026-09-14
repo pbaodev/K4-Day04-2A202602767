@@ -96,8 +96,8 @@ Agent cần tôn trọng các nguyên tắc sau:
 
 ## Expectation đầu ra bắt buộc
 
-Khi hoàn thành core lab, nhóm cần nộp:
-
+Khi hoàn thành core lab, nhóm cần nộp:b
+i
 | Deliverable | Expectation |
 |---|---|
 | `system_prompt.md` | Prompt cuối cùng được cải thiện từ evidence, không hard-code case IDs |
