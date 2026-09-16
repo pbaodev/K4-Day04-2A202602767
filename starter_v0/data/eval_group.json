@@ -1,7 +1,298 @@
 {
   "dataset_id": "day04_v3_helpdesk_group",
   "dataset_role": "group",
-  "description": "Template intentionally left empty. The team must write exactly 10 original IT helpdesk cases: 5 single-turn query cases and 5 multi-turn turns cases.",
-  "allowed_failure_types": ["wrong_tool", "wrong_arg_value", "wrong_boundary", "unnecessary_tool", "out_of_scope", "missing_info"],
-  "cases": []
+  "description": "Team-authored eval for the IT Helpdesk Agent: 10 original cases (5 single-turn, 5 multi-turn) covering routing, argument conventions, missing information, correction/cancellation, confirmation boundary and the external-data boundary.",
+  "allowed_failure_types": [
+    "wrong_tool",
+    "wrong_arg_value",
+    "wrong_boundary",
+    "unnecessary_tool",
+    "out_of_scope",
+    "missing_info"
+  ],
+  "cases": [
+    {
+      "id": "G01_printer_device_not_service",
+      "phase": "B",
+      "suite": "group",
+      "query": "Máy in PR-404 kẹt giấy liên tục từ sáng nay, kiểm tra phần cứng của đúng máy đó giúp tôi.",
+      "failure_type": "wrong_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "PR-404",
+              "check": "hardware"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "route_single_asset",
+        "difficulty": "easy",
+        "what_it_tests": "Sự cố phần cứng của một asset cụ thể phải dùng inspect_device, không phải trạng thái dịch vụ printing dùng chung."
+      }
+    },
+    {
+      "id": "G02_policy_response_time",
+      "phase": "B",
+      "suite": "group",
+      "query": "Theo chính sách công ty, sự cố mức critical phải được phản hồi trong bao lâu?",
+      "failure_type": "wrong_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "policy",
+            "args": {
+              "policy_area": "incident_response"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "route_policy_vs_kb",
+        "difficulty": "medium",
+        "what_it_tests": "Câu hỏi về quy định nội bộ phải tra policy, không dùng knowledge base hướng dẫn kỹ thuật."
+      }
+    },
+    {
+      "id": "G03_wifi_missing_asset_id",
+      "phase": "B",
+      "suite": "group",
+      "query": "Laptop của tôi không vào được Wi-Fi văn phòng, kiểm tra giúp tôi.",
+      "failure_type": "missing_info",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "text"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "no_guess_identifier",
+        "difficulty": "medium",
+        "what_it_tests": "Thiếu Asset ID thì phải hỏi lại, không được suy đoán ID hoặc dùng 'laptop' làm asset_id."
+      }
+    },
+    {
+      "id": "G04_public_driver_search",
+      "phase": "B",
+      "suite": "group",
+      "query": "Tìm giúp tôi driver mới nhất cho dòng Dell Latitude 7440 trên trang hỗ trợ của hãng.",
+      "failure_type": "wrong_boundary",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "search_device_info",
+            "args": {
+              "manufacturer": "Dell",
+              "model": "Latitude 7440",
+              "query_type": "drivers"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "external_public_fields_only",
+        "difficulty": "medium",
+        "what_it_tests": "External search chỉ nhận hãng, model công khai và loại query; không kèm asset ID hay dữ liệu nội bộ."
+      }
+    },
+    {
+      "id": "G05_user_assets_single_lookup",
+      "phase": "B",
+      "suite": "group",
+      "query": "EMP-1007 hiện được cấp những thiết bị nào?",
+      "failure_type": "unnecessary_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "lookup_user",
+            "args": {
+              "employee_id": "EMP-1007"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "stop_at_directory_record",
+        "difficulty": "medium",
+        "what_it_tests": "Chỉ hỏi danh sách thiết bị được cấp thì lookup_user là đủ, không chẩn đoán thêm từng asset."
+      }
+    },
+    {
+      "id": "G06_asset_correction",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Kiểm tra VPN trên máy LT-204 giúp tôi."
+        },
+        {
+          "role": "user",
+          "content": "Xin lỗi tôi nhầm, máy tôi đang dùng là LT-411."
+        },
+        {
+          "role": "user",
+          "content": "Kiểm tra đúng máy đó, chỉ phần VPN thôi."
+        }
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "LT-411",
+              "check": "vpn"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "latest_intent_wins",
+        "difficulty": "hard",
+        "what_it_tests": "Correction ở turn sau phải ghi đè asset ID cũ; không được dùng lại LT-204."
+      }
+    },
+    {
+      "id": "G07_cancel_then_kb",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "VPN của tôi rớt liên tục, tạo giúp tôi một ticket."
+        },
+        {
+          "role": "user",
+          "content": "Khoan đã, tôi thử lại thì vào được rồi nên không cần ticket nữa."
+        },
+        {
+          "role": "user",
+          "content": "Thay vào đó cho tôi hướng dẫn tự xử lý khi VPN rớt."
+        }
+      ],
+      "failure_type": "unnecessary_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "search_kb",
+            "args": {
+              "category": "vpn"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "cancellation_clears_action",
+        "difficulty": "hard",
+        "what_it_tests": "Yêu cầu bị huỷ thì không được tạo ticket; chuyển sang đúng tool hướng dẫn."
+      }
+    },
+    {
+      "id": "G08_stale_confirmation_priority",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Tạo ticket priority high cho LT-240 bị rớt Wi-Fi."
+        },
+        {
+          "role": "user",
+          "content": "Đúng rồi, tạo giúp tôi."
+        },
+        {
+          "role": "user",
+          "content": "Khoan, đổi priority thành critical rồi hãy tạo."
+        }
+      ],
+      "failure_type": "wrong_boundary",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "yes_no"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "confirmation_bound_to_payload",
+        "difficulty": "hard",
+        "what_it_tests": "Payload đổi sau khi đã xác nhận thì xác nhận cũ hết hiệu lực, phải hỏi lại trước khi ghi ticket."
+      }
+    },
+    {
+      "id": "G09_same_service_other_environment",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Email production có đang gặp sự cố không?"
+        },
+        {
+          "role": "user",
+          "content": "Kiểm tra thêm bản staging của đúng dịch vụ đó."
+        }
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "check_service_status",
+            "args": {
+              "service": "email",
+              "environment": "staging"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "carry_over_service_switch_environment",
+        "difficulty": "medium",
+        "what_it_tests": "Carry-over tên dịch vụ từ turn trước nhưng đổi environment theo yêu cầu mới nhất."
+      }
+    },
+    {
+      "id": "G10_format_only_no_lookup",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "VPN production đang degraded do lỗi xác thực không liên tục, incident INC-1042."
+        },
+        {
+          "role": "user",
+          "content": "Máy DT-031 cũng báo lỗi xác thực VPN lúc 8h sáng nay."
+        },
+        {
+          "role": "user",
+          "content": "Chỉ cần format hai thông tin trên thành incident report, đừng tra cứu thêm gì nữa."
+        }
+      ],
+      "failure_type": "unnecessary_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "format_incident_report"
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "format_only_request",
+        "difficulty": "hard",
+        "what_it_tests": "Yêu cầu format-only thì chỉ gọi tool báo cáo, không gọi lại status hay inspect."
+      }
+    }
+  ]
 }
